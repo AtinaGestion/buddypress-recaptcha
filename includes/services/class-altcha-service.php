@@ -41,6 +41,46 @@ if ( ! class_exists( 'AltchaPlugin' ) && ( ! function_exists( 'is_plugin_active'
  * phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedClassFound
  */
 class WBC_Altcha_Service extends WBC_Captcha_Service_Base {
+	/** @var array|null Bundled widget translations, loaded once per request. */
+	private $widget_catalogs;
+
+	/**
+	 * Resolve the widget language independently of WordPress gettext catalogs.
+	 *
+	 * The explicit CAPTCHA language takes precedence over the current frontend
+	 * locale. Passing strings in the element also works after AJAX replacement,
+	 * without relying on a separate script's execution order or an external CDN.
+	 *
+	 * @return array
+	 */
+	private function get_widget_translations() {
+		if ( null === $this->widget_catalogs ) {
+			$this->widget_catalogs = wp_json_file_decode(
+				dirname( __DIR__, 2 ) . '/languages/altcha/catalogs.json',
+				array( 'associative' => true )
+			) ?? array();
+		}
+
+		$language = trim( (string) get_option( 'wbc_recaptcha_language', '' ) );
+		if ( '' === $language ) {
+			$language = get_locale();
+		}
+		$language = strtolower( str_replace( '_', '-', $language ) );
+		$base     = explode( '-', $language )[0];
+		$aliases  = array( 'es' => 'es-es', 'fr' => 'fr-fr', 'pt' => 'pt-pt', 'no' => 'nb', 'iw' => 'he' );
+		$alias    = $aliases[ $base ] ?? $base;
+		if ( 'es' === $base && 'es' !== $language && 'es-es' !== $language ) {
+			$alias = 'es-419';
+		}
+		foreach ( array( $language, $alias, $base, 'en' ) as $candidate ) {
+			if ( isset( $this->widget_catalogs[ $candidate ] ) ) {
+				return array( 'language' => $candidate, 'strings' => $this->widget_catalogs[ $candidate ] );
+			}
+		}
+
+		// The bundled ALTCHA library itself always includes English defaults.
+		return array( 'language' => 'en', 'strings' => array() );
+	}
 
 	/**
 	 * Initialize service configuration
@@ -284,6 +324,7 @@ class WBC_Altcha_Service extends WBC_Captcha_Service_Base {
 		// Get settings.
 		$auto_verify = get_option( 'wbc_altcha_auto_verify', 'off' );
 		$hide_logo   = get_option( 'wbc_altcha_hide_logo', 'no' ) === 'yes';
+		$translation = $this->get_widget_translations();
 
 		// Generate unique ID.
 		$widget_id = 'altcha-' . $context . '-wbc';
@@ -297,6 +338,10 @@ class WBC_Altcha_Service extends WBC_Captcha_Service_Base {
 		<div class="wbc_captcha_field wbc_altcha_field input">
 			<altcha-widget
 				id="<?php echo esc_attr( $widget_id ); ?>"
+				language="<?php echo esc_attr( $translation['language'] ); ?>"
+				<?php if ( ! empty( $translation['strings'] ) ) : ?>
+				strings="<?php echo esc_attr( wp_json_encode( $translation['strings'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) ); ?>"
+				<?php endif; ?>
 				challengejson='<?php echo wp_json_encode( $challenge ); ?>'
 				<?php if ( 'off' !== $auto_verify ) : ?>
 				auto="<?php echo esc_attr( $auto_verify ); ?>"
