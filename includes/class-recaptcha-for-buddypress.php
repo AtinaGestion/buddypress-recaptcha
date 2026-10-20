@@ -390,8 +390,8 @@ class Recaptcha_For_BuddyPress {
 		// Elementor Pro - register hooks after plugins are loaded.
 		add_action( 'plugins_loaded', array( $this, 'register_elementorpro_hooks' ), 20 );
 
-		// Divi Builder - register hooks after plugins are loaded.
-		add_action( 'plugins_loaded', array( $this, 'register_divi_hooks' ), 20 );
+		// Divi's theme initializes ET_BUILDER_VERSION during init, not theme setup.
+		add_action( 'init', array( $this, 'register_divi_hooks' ), 20 );
 
 		// Easy Digital Downloads - register hooks after plugins are loaded.
 		add_action( 'plugins_loaded', array( $this, 'register_edd_hooks' ), 20 );
@@ -703,10 +703,12 @@ class Recaptcha_For_BuddyPress {
 		$divi_form = new Divi_Form();
 
 		// Render CAPTCHA in Divi contact forms (priority 10).
-		add_filter( 'et_pb_contact_form_module_output', array( $divi_form, 'render_divi_captcha' ), 10, 2 );
+		add_filter( 'et_pb_contact_form_shortcode_output', array( $divi_form, 'render_divi_captcha' ), 10, 2 );
+		add_filter( 'render_block_divi/contact-form', array( $divi_form, 'render_divi_block_captcha' ), 10, 2 );
 
-		// Validate CAPTCHA on Divi form submission.
-		add_filter( 'et_contact_form_before_send', array( $divi_form, 'validate_divi_captcha' ), 10, 1 );
+		// Both handlers process mail during rendering; check before they run.
+		add_filter( 'divi_module_library_register_module_attrs', array( $divi_form, 'validate_divi5_captcha' ), 20, 2 );
+		add_filter( 'pre_do_shortcode_tag', array( $divi_form, 'validate_divi_shortcode_captcha' ), 10, 2 );
 	}
 
 	/**

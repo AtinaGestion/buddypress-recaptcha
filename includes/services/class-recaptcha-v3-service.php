@@ -212,10 +212,14 @@ class WBC_Recaptcha_V3_Service extends WBC_Captcha_Service_Base {
 
 		$site_key       = $this->get_site_key();
 		$action         = $this->get_action_for_context( $context );
-		$token_field_id = 'wbc_recaptcha_' . $context . '_token';
+		$token_field_name = 'wbc_recaptcha_' . $context . '_token';
+		$token_field_id   = $token_field_name;
+		if ( ! empty( $args['instance_id'] ) ) {
+			$token_field_id .= '_' . sanitize_key( $args['instance_id'] );
+		}
 
 		// Add hidden field for token.
-		echo '<input type="hidden" name="' . esc_attr( $token_field_id ) . '" id="' . esc_attr( $token_field_id ) . '" value="" />';
+		echo '<input type="hidden" name="' . esc_attr( $token_field_name ) . '" id="' . esc_attr( $token_field_id ) . '" value="" />';
 
 		// Add nonce for security.
 		wp_nonce_field( 'wbc_captcha_' . $context, 'wbc_captcha_nonce_' . $context );

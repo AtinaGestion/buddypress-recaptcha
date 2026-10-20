@@ -50,3 +50,13 @@ input[disabled] {
   color: #767676 !important;
   opacity: .4 !important;
 }
+
+/* ALTCHA must remain readable when Divi's contact fields use white text. */
+.wbc-divi-captcha altcha-widget {
+  --altcha-color-text: #1f2937;
+  --altcha-color-base: #fff;
+  --altcha-color-footer-bg: #f3f4f6;
+  --altcha-color-border: #d1d5db;
+  color: #1f2937;
+  color-scheme: light;
+}
